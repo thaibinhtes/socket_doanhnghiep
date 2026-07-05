@@ -8,6 +8,6 @@ RUN npm install --omit=dev
 COPY src ./src
 COPY .env.example ./.env.example
 
-EXPOSE 6001
+EXPOSE 3001
 
 CMD ["npm", "start"]

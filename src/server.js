@@ -6,7 +6,7 @@ import cors from 'cors'
 import Redis from 'ioredis'
 import { verifyToken } from './auth.js'
 
-const port = Number(process.env.SOCKET_PORT ?? 6001)
+const port = Number(process.env.SOCKET_PORT ?? 3001)
 const redisChannel = process.env.REDIS_CHANNEL ?? 'mobi:import-events'
 const internalSecret = process.env.INTERNAL_SECRET ?? 'mobi-socket-internal'
 const corsOrigins = (process.env.SOCKET_CORS_ORIGIN ?? 'http://localhost:3000')
