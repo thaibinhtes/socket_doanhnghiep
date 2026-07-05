@@ -3,10 +3,12 @@ import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
-import Redis from 'ioredis'
 import { verifyToken } from './auth.js'
+import { createRedisSubscriber } from './redis.js'
 
 const port = Number(process.env.SOCKET_PORT ?? 3001)
+const redisHost = process.env.REDIS_HOST ?? '127.0.0.1'
+const redisPort = Number(process.env.REDIS_PORT ?? 6379)
 const redisChannel = process.env.REDIS_CHANNEL ?? 'mobi:import-events'
 const internalSecret = process.env.INTERNAL_SECRET ?? 'mobi-socket-internal'
 const corsOrigins = (process.env.SOCKET_CORS_ORIGIN ?? 'http://localhost:3000')
@@ -14,12 +16,21 @@ const corsOrigins = (process.env.SOCKET_CORS_ORIGIN ?? 'http://localhost:3000')
   .map((origin) => origin.trim())
   .filter(Boolean)
 
+let redisConnected = false
+
 const app = express()
 app.use(cors({ origin: corsOrigins }))
 app.use(express.json())
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'mobi-socket' })
+  res.json({
+    status: 'ok',
+    service: 'mobi-socket',
+    redis: redisConnected ? 'connected' : 'disconnected',
+    redisHost,
+    redisPort,
+    channel: redisChannel,
+  })
 })
 
 const httpServer = createServer(app)
@@ -95,39 +106,18 @@ app.post('/internal/notify', (req, res) => {
   return res.json({ ok: true })
 })
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST ?? '127.0.0.1',
-  port: Number(process.env.REDIS_PORT ?? 6379),
-  password: process.env.REDIS_PASSWORD || undefined,
-  lazyConnect: true,
-  maxRetriesPerRequest: null,
+createRedisSubscriber({
+  host: redisHost,
+  port: redisPort,
+  password: process.env.REDIS_PASSWORD,
+  channel: redisChannel,
+  onMessage: handleImportEvent,
+  onStatus: (connected) => {
+    redisConnected = connected
+  },
 })
-
-redis.on('error', (error) => {
-  console.error('[socket] redis error:', error.message)
-})
-
-async function subscribeRedis() {
-  try {
-    await redis.connect()
-    const subscriber = redis.duplicate()
-    await subscriber.connect()
-    await subscriber.subscribe(redisChannel)
-    subscriber.on('message', (_channel, raw) => {
-      try {
-        handleImportEvent(JSON.parse(raw))
-      } catch (error) {
-        console.error('[socket] invalid redis payload:', error.message)
-      }
-    })
-    console.info(`[socket] subscribed redis channel ${redisChannel}`)
-  } catch (error) {
-    console.warn('[socket] redis unavailable — HTTP /internal/notify fallback only:', error.message)
-  }
-}
-
-subscribeRedis()
 
 httpServer.listen(port, () => {
   console.info(`[socket] listening on :${port}`)
+  console.info(`[socket] redis target ${redisHost}:${redisPort} channel ${redisChannel}`)
 })

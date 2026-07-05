@@ -1,0 +1,30 @@
+# Chạy Redis + Socket cùng nhau (dev local)
+# Usage: docker compose up -d --build
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  socket:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      SOCKET_PORT: 3001
+      SOCKET_CORS_ORIGIN: http://localhost:3000,http://127.0.0.1:3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_CHANNEL: mobi:import-events
+      JWT_SECRET: ${JWT_SECRET:-}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-mobi-socket-internal}
+    depends_on:
+      redis:
+        condition: service_healthy
