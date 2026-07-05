@@ -6,7 +6,11 @@ COPY package.json ./
 RUN npm install --omit=dev
 
 COPY src ./src
-COPY .env.example ./.env.example
+
+ENV SOCKET_PORT=3001 \
+    REDIS_HOST=redis \
+    REDIS_PORT=6379 \
+    REDIS_CHANNEL=mobi:import-events
 
 EXPOSE 3001
 
