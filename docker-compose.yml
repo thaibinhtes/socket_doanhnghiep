@@ -22,6 +22,7 @@ services:
       - .env
     environment:
       SOCKET_PORT: 3001
+      RUNNING_IN_DOCKER: "1"
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_CHANNEL: mobi:import-events

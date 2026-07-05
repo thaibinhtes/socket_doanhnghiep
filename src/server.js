@@ -5,9 +5,10 @@ import { Server } from 'socket.io'
 import cors from 'cors'
 import { verifyToken } from './auth.js'
 import { createRedisSubscriber } from './redis.js'
+import { resolveRedisHost } from './resolveRedisHost.js'
 
 const port = Number(process.env.SOCKET_PORT ?? 3001)
-const redisHost = process.env.REDIS_HOST ?? '127.0.0.1'
+const redisHost = resolveRedisHost()
 const redisPort = Number(process.env.REDIS_PORT ?? 6379)
 const redisChannel = process.env.REDIS_CHANNEL ?? 'mobi:import-events'
 const internalSecret = process.env.INTERNAL_SECRET ?? 'mobi-socket-internal'
